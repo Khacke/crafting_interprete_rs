@@ -2,9 +2,9 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
-    ErrorFileNotFound(String),
+    FileNotFound(String),
     FileNotUtf8(String),
-    ErrorUnexpectedCharacter(usize)
+    UnexpectedCharacter(usize)
 }
 
 // region:    - Error impl

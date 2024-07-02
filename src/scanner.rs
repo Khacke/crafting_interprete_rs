@@ -24,7 +24,7 @@ impl Scanner {
     }
 
     fn scan_token(&mut self) -> Result<()> {
-        let c = self.advance().ok_or(Error::ErrorUnexpectedCharacter(self.line))?;
+        let c = self.advance().ok_or(Error::UnexpectedCharacter(self.line))?;
         match c {
             '(' => self.add_token(TokenType::LeftParen, None),
             ')' => self.add_token(TokenType::RightParen, None),
@@ -52,7 +52,7 @@ impl Scanner {
                 self.increment();
                 self.add_token(if self.match_char('=') {TokenType::GreaterEqual} else {TokenType::Greater}, None);
             }
-            _   => return Err(Error::ErrorUnexpectedCharacter(self.line))
+            _   => return Err(Error::UnexpectedCharacter(self.line))
         }
         Ok(())
     }

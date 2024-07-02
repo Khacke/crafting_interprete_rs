@@ -24,9 +24,9 @@ fn main() -> Result<()> {
 }
 //TODO: better error handling?
 fn run_file(file_path: &str) -> Result<()> {
-    let mut file = File::open(file_path).map_err(|_| Error::ErrorFileNotFound(file_path.to_owned()))?;
+    let mut file = File::open(file_path).map_err(|_| Error::FileNotFound(file_path.to_owned()))?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents).map_err(|_| Error::FileNotUtf8(file_path.to_owned()));
+    file.read_to_string(&mut contents).map_err(|_| Error::FileNotUtf8(file_path.to_owned()))?;
     run(&contents)?;
     Ok(())
 }
@@ -46,7 +46,7 @@ fn run_prompt() -> Result<()> {
 }
 fn run(source: &str) -> Result<()> {
     let mut scanner = Scanner::new(source.to_owned());
-    let tokens = scanner.scan_tokens();
+    let tokens = scanner.scan_tokens()?;
 
     for token in tokens {
         println!("{:?}", token);
