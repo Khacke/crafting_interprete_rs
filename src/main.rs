@@ -12,8 +12,8 @@ fn main() -> Result<()> {
     let mut args = env::args();
 
     match args.len() {
-        0 => run_prompt()?,
-        1 => run_file(&args.next().unwrap())?,
+        1 => run_prompt()?,
+        2 => run_file(&args.next().unwrap())?,
         _ => {
             println!("cargo run [script]");
             std::process::exit(64);
@@ -51,6 +51,6 @@ fn run(source: &str) -> Result<()> {
     for token in tokens {
         println!("{:?}", token);
     }
-
-    todo!()
+    
+    Ok(())
 }
