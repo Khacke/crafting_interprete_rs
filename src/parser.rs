@@ -29,7 +29,13 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr> {
-        self.equality()
+        let mut expr = self.equality()?;
+
+        while self.match_type(&[TokenType::Comma]) {
+            expr = self.equality()?;
+        }
+
+        Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Expr> {
