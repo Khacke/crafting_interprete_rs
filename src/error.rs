@@ -6,6 +6,7 @@ pub enum Error {
     FileNotUtf8(String),
     UnexpectedCharacter(usize),
     UnterminatedString(usize),
+    ParseError(String)
 }
 
 // region:    - Error impl

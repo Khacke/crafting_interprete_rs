@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::error::{Error, Result};
-use crate::token::{Token, TokenType};
+use crate::token::{Literal, Token, TokenType};
 
 #[derive(Debug, Clone)]
 pub struct Scanner {
@@ -50,7 +50,7 @@ impl Scanner {
         self.tokens.push(Token::new(
             TokenType::Eof,
             "".to_owned(),
-            "".to_owned(),
+            None,
             self.line,
         ));
         Ok(&self.tokens)
@@ -79,12 +79,7 @@ impl Scanner {
                 } else {
                     TokenType::Bang
                 };
-                let l = if f {
-                    Some("!=".to_owned())
-                } else {
-                    Some("!".to_owned())
-                };
-                self.add_token(tt, l);
+                self.add_token(tt, None);
                 if self.tokens.last().unwrap().token_type == TokenType::BangEqual {
                     self.increment();
                 }
@@ -96,12 +91,7 @@ impl Scanner {
                 } else {
                     TokenType::Equal
                 };
-                let l = if f {
-                    Some("==".to_string())
-                } else {
-                    Some("=".to_string())
-                };
-                self.add_token(tt, l);
+                self.add_token(tt, None);
                 if self.tokens.last().unwrap().token_type == TokenType::EqualEqual {
                     self.increment();
                 }
@@ -113,12 +103,7 @@ impl Scanner {
                 } else {
                     TokenType::Less
                 };
-                let l = if f {
-                    Some("<=".to_string())
-                } else {
-                    Some("<".to_string())
-                };
-                self.add_token(tt, l);
+                self.add_token(tt, None);
                 if self.tokens.last().unwrap().token_type == TokenType::LessEqual {
                     self.increment();
                 }
@@ -130,22 +115,27 @@ impl Scanner {
                 } else {
                     TokenType::Greater
                 };
-                let l = if f {
-                    Some(">=".to_string())
-                } else {
-                    Some(">".to_string())
-                };
-                self.add_token(tt, l);
+                self.add_token(tt, None);
                 if self.tokens.last().unwrap().token_type == TokenType::GreaterEqual {
                     self.increment();
                 }
             }
             '/' => {
                 let f = self.match_char('/');
+                let ff = self.match_char('*');
                 if f {
                     while self.peek() != '\n' && !self.is_at_end() {
                         self.advance();
                     }
+                } else if ff {
+                    while self.peek() != '*' && self.peek_next() != '/' && !self.is_at_end() {
+                        if self.peek() == '\n' {
+                            self.line += 1;
+                        }
+                        self.advance();
+                    }
+                    self.advance();
+                    self.advance();
                 } else {
                     self.add_token(TokenType::Slash, None);
                 }
@@ -178,16 +168,12 @@ impl Scanner {
         c
     }
 
-    fn add_token(&mut self, token: TokenType, literal: Option<String>) {
+    fn add_token(&mut self, token: TokenType, literal: Option<Literal>) {
         let text = &self.source[self.start..self.current];
         self.tokens.push(Token::new(
             token,
             text.to_owned(),
-            if let Some(l) = literal {
-                l
-            } else {
-                "".to_owned()
-            },
+            literal,
             self.line,
         ));
     }
@@ -222,7 +208,7 @@ impl Scanner {
         self.advance();
 
         let value: String = self.source.clone()[self.start + 1..self.current - 1].to_owned();
-        self.add_token(TokenType::String, Some(value));
+        self.add_token(TokenType::String, Some(Literal::Str(value)));
 
         Ok(())
     }
@@ -242,7 +228,7 @@ impl Scanner {
 
         self.add_token(
             TokenType::Number,
-            Some(self.source.clone()[self.start..self.current].to_owned()),
+            Some(Literal::Number(self.source.clone()[self.start..self.current].parse::<f64>().unwrap())),
         );
         Ok(())
     }
@@ -272,7 +258,7 @@ impl Scanner {
             .get(&text)
             .unwrap_or(&TokenType::Identifier)
             .to_owned();
-        self.add_token(tt, None);
+        self.add_token(tt, Some(Literal::Identifier(text)));
         Ok(())
     }
 }
@@ -288,17 +274,17 @@ mod tests {
         let mut scanner = Scanner::new(source);
         let result = scanner.scan_tokens().unwrap();
         let expected_tokens = vec![
-            Token::new(TokenType::LeftParen, "(".to_string(), "".to_string(), 1),
-            Token::new(TokenType::RightParen, ")".to_string(), "".to_string(), 1),
-            Token::new(TokenType::LeftBrace, "{".to_string(), "".to_string(), 1),
-            Token::new(TokenType::RightBrace, "}".to_string(), "".to_string(), 1),
-            Token::new(TokenType::Comma, ",".to_string(), "".to_string(), 1),
-            Token::new(TokenType::Dot, ".".to_string(), "".to_string(), 1),
-            Token::new(TokenType::Minus, "-".to_string(), "".to_string(), 1),
-            Token::new(TokenType::Plus, "+".to_string(), "".to_string(), 1),
-            Token::new(TokenType::Semicolon, ";".to_string(), "".to_string(), 1),
-            Token::new(TokenType::Star, "*".to_string(), "".to_string(), 1),
-            Token::new(TokenType::Eof, "".to_string(), "".to_string(), 1),
+            Token::new(TokenType::LeftParen, "(".to_string(), None, 1),
+            Token::new(TokenType::RightParen, ")".to_string(), None, 1),
+            Token::new(TokenType::LeftBrace, "{".to_string(), None, 1),
+            Token::new(TokenType::RightBrace, "}".to_string(), None, 1),
+            Token::new(TokenType::Comma, ",".to_string(), None, 1),
+            Token::new(TokenType::Dot, ".".to_string(), None, 1),
+            Token::new(TokenType::Minus, "-".to_string(), None, 1),
+            Token::new(TokenType::Plus, "+".to_string(), None, 1),
+            Token::new(TokenType::Semicolon, ";".to_string(), None, 1),
+            Token::new(TokenType::Star, "*".to_string(), None, 1),
+            Token::new(TokenType::Eof, "".to_string(), None, 1),
         ];
         assert_eq!(result, &expected_tokens);
     }
@@ -309,20 +295,20 @@ mod tests {
         let mut scanner = Scanner::new(source);
         let result = scanner.scan_tokens().unwrap();
         let expected_tokens = vec![
-            Token::new(TokenType::Bang, "!".to_string(), "!".to_string(), 1),
-            Token::new(TokenType::BangEqual, "!=".to_string(), "!=".to_string(), 1),
-            Token::new(TokenType::EqualEqual, "==".to_string(), "==".to_string(), 1),
-            Token::new(TokenType::Equal, "=".to_string(), "=".to_string(), 1),
-            Token::new(TokenType::Less, "<".to_string(), "<".to_string(), 1),
-            Token::new(TokenType::LessEqual, "<=".to_string(), "<=".to_string(), 1),
-            Token::new(TokenType::Greater, ">".to_string(), ">".to_string(), 1),
+            Token::new(TokenType::Bang, "!".to_string(), None, 1),
+            Token::new(TokenType::BangEqual, "!=".to_string(), None, 1),
+            Token::new(TokenType::EqualEqual, "==".to_string(), None, 1),
+            Token::new(TokenType::Equal, "=".to_string(), None, 1),
+            Token::new(TokenType::Less, "<".to_string(), None, 1),
+            Token::new(TokenType::LessEqual, "<=".to_string(), None, 1),
+            Token::new(TokenType::Greater, ">".to_string(), None, 1),
             Token::new(
                 TokenType::GreaterEqual,
                 ">=".to_string(),
-                ">=".to_string(),
+                None,
                 1,
             ),
-            Token::new(TokenType::Eof, "".to_string(), "".to_string(), 1),
+            Token::new(TokenType::Eof, "".to_string(), None, 1),
         ];
         assert_eq!(result, &expected_tokens);
     }
@@ -336,10 +322,10 @@ mod tests {
             Token::new(
                 TokenType::String,
                 "\"hello world\"".to_string(),
-                "hello world".to_string(),
+                Some(Literal::Str("hello world".to_owned())),
                 1,
             ),
-            Token::new(TokenType::Eof, "".to_string(), "".to_string(), 1),
+            Token::new(TokenType::Eof, "".to_string(), None, 1),
         ];
         assert_eq!(result, &expected_tokens);
     }
@@ -362,10 +348,10 @@ mod tests {
             Token::new(
                 TokenType::Number,
                 "12345".to_string(),
-                "12345".to_string(),
+                Some(Literal::Number(12345 as f64)),
                 1,
             ),
-            Token::new(TokenType::Eof, "".to_string(), "".to_string(), 1),
+            Token::new(TokenType::Eof, "".to_string(), None, 1),
         ];
         assert_eq!(result, &expected_tokens);
     }
@@ -379,10 +365,10 @@ mod tests {
             Token::new(
                 TokenType::Number,
                 "123.45".to_string(),
-                "123.45".to_string(),
+                Some(Literal::Number(123.45 as f64)),
                 1,
             ),
-            Token::new(TokenType::Eof, "".to_string(), "".to_string(), 1),
+            Token::new(TokenType::Eof, "".to_string(), None, 1),
         ];
         assert_eq!(result, &expected_tokens);
     }
@@ -401,11 +387,11 @@ mod tests {
         let mut scanner = Scanner::new(source);
         let result = scanner.scan_tokens().unwrap();
         let expected_tokens = vec![
-            Token::new(TokenType::LeftParen, "(".to_string(), "".to_string(), 1),
-            Token::new(TokenType::RightParen, ")".to_string(), "".to_string(), 1),
-            Token::new(TokenType::LeftBrace, "{".to_string(), "".to_string(), 1),
-            Token::new(TokenType::RightBrace, "}".to_string(), "".to_string(), 1),
-            Token::new(TokenType::Eof, "".to_string(), "".to_string(), 1),
+            Token::new(TokenType::LeftParen, "(".to_string(), None, 1),
+            Token::new(TokenType::RightParen, ")".to_string(), None, 1),
+            Token::new(TokenType::LeftBrace, "{".to_string(), None, 1),
+            Token::new(TokenType::RightBrace, "}".to_string(), None, 1),
+            Token::new(TokenType::Eof, "".to_string(), None, 1),
         ];
         assert_eq!(result, &expected_tokens);
     }
@@ -416,9 +402,9 @@ mod tests {
         let mut scanner = Scanner::new(source);
         let result = scanner.scan_tokens().unwrap();
         let expected_tokens = vec![
-            Token::new(TokenType::LeftParen, "(".to_string(), "".to_string(), 1),
-            Token::new(TokenType::RightParen, ")".to_string(), "".to_string(), 2),
-            Token::new(TokenType::Eof, "".to_string(), "".to_string(), 2),
+            Token::new(TokenType::LeftParen, "(".to_string(), None, 1),
+            Token::new(TokenType::RightParen, ")".to_string(), None, 2),
+            Token::new(TokenType::Eof, "".to_string(), None, 2),
         ];
         assert_eq!(result, &expected_tokens);
     }
@@ -434,13 +420,13 @@ mod tests {
             expected_tokens.push(Token::new(
                 token_type.clone(),
                 token_text.clone(),
-                "".to_string(),
+                Some(Literal::Identifier(token_text.clone())),
                 1,
             ));
             expected_tokens.push(Token::new(
                 TokenType::Eof,
                 "".to_string(),
-                "".to_string(),
+                None,
                 1,
             ));
 
@@ -460,8 +446,24 @@ mod tests {
         let expected_tokens = vec![Token::new(
             TokenType::Eof,
             "".to_string(),
-            "".to_string(),
+            None,
             2,
+        )];
+
+        assert_eq!(result, &expected_tokens);
+    }
+
+    #[test]
+    fn test_scan_tokens_multiline_comments() {
+        let source = "/* This is a comment */".to_string();
+        let mut scanner = Scanner::new(source);
+        let result = scanner.scan_tokens().unwrap();
+
+        let expected_tokens = vec![Token::new(
+            TokenType::Eof,
+            "".to_string(),
+            None,
+            1,
         )];
 
         assert_eq!(result, &expected_tokens);
